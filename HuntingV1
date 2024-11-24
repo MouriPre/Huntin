@@ -1,0 +1,1019 @@
+local MacLib = loadstring(game:HttpGet("https://github.com/biggaboy212/Maclib/releases/latest/download/maclib.txt"))()
+
+local Window = MacLib:Window({
+	Title = "MacX Mouri",
+	Subtitle = "Mùa săn bắn.",
+	Size = UDim2.fromOffset(868, 650),
+	DragStyle = 1,
+	DisabledWindowControls = {},
+	ShowUserInfo = true,
+	Keybind = Enum.KeyCode.RightControl,
+	AcrylicBlur = true,
+})
+
+local globalSettings = {
+	UIBlurToggle = Window:GlobalSetting({
+		Name = "Làm mờ giao diện người dùng",
+		Default = Window:GetAcrylicBlurState(),
+		Callback = function(bool)
+			Window:SetAcrylicBlurState(bool)
+			Window:Notify({
+				Title = Window.Settings.Title,
+				Description = (bool and "Bật" or "Tắt") .. " Làm mờ giao diện người dùng",
+				Lifetime = 5
+			})
+		end,
+	}),
+	NotificationToggler = Window:GlobalSetting({
+		Name = "Thông báo",
+		Default = Window:GetNotificationsState(),
+		Callback = function(bool)
+			Window:SetNotificationsState(bool)
+			Window:Notify({
+				Title = Window.Settings.Title,
+				Description = (bool and "Bật" or "Tắt") .. " Thông báo",
+				Lifetime = 5
+			})
+		end,
+	}),
+	ShowUserInfo = Window:GlobalSetting({
+		Name = "Hiển thị thông tin người dùng",
+		Default = Window:GetUserInfoState(),
+		Callback = function(bool)
+			Window:SetUserInfoState(bool)
+			Window:Notify({
+				Title = Window.Settings.Title,
+				Description = (bool and "Đang hiển thị" or "Đã che lại") .. " Hiển thị thông tin người dùng",
+				Lifetime = 5
+			})
+		end,
+	})
+}
+
+local tabGroups = {
+	TabGroup1 = Window:TabGroup()
+}
+
+local tabs = {
+	Main = tabGroups.TabGroup1:Tab({ Name = "Thông báo Update", Image = "rbxassetid://81478297548754" }),
+	Esp = tabGroups.TabGroup1:Tab({ Name = "Định vị", Image = "rbxassetid://84727577248856" }),
+	Aim = tabGroups.TabGroup1:Tab({ Name = "Aimbot", Image = "rbxassetid://130939958971532" }),
+	Mo = tabGroups.TabGroup1:Tab({ Name = "Movement", Image = "rbxassetid://130939958971532" }),
+	Settings = tabGroups.TabGroup1:Tab({ Name = "Cài đặt", Image = "rbxassetid://75791170485208" })
+}
+
+local sections = {
+	MainSection1 = tabs.Main:Section({ Side = "Left" }),
+	EspSection1 = tabs.Esp:Section({ Side = "Left" }),
+	AimSection1 = tabs.Aim:Section({ Side = "Left" }),
+}
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+------------------------------------------------------------------------------------------------------------
+sections.EspSection1:Header({
+	Name = "Tiêu đề #1"
+})
+
+sections.EspSection1:Paragraph({
+	Header = "Chi tiết",
+	Body = "Esp động vật"
+})
+
+sections.AimSection1:Header({
+	Name = "Tiêu đề #1"
+})
+
+sections.AimSection1:Paragraph({
+	Header = "Chi tiết",
+	Body = "Hỗ trộ ngắm động vật"
+})
+
+
+
+
+
+------------------
+-- Tạo các biến để lưu trạng thái ban đầu
+local DefaultFogEnd
+local DefaultFogStart
+local DefaultClockTime
+local DefaultGlobalShadows
+local DefaultBrightness
+
+-- Lưu trữ các settings gốc khi script chạy
+local lighting = game:GetService("Lighting")
+DefaultFogEnd = lighting.FogEnd
+DefaultFogStart = lighting.FogStart
+DefaultClockTime = lighting.ClockTime
+DefaultGlobalShadows = lighting.GlobalShadows
+DefaultBrightness = lighting.Brightness
+
+sections.EspSection1:Toggle({
+    Name = "FPS Boost",
+    Default = false,
+    Callback = function(value)
+        local lighting = game:GetService("Lighting")
+        local terrain = workspace.Terrain
+        
+        if value then
+            -- Bật FPS Boost
+            
+            -- Tối ưu lighting
+            lighting.FogEnd = 100
+            lighting.FogStart = 0
+            lighting.ClockTime = 12 -- Giữ ánh sáng ban ngày
+            lighting.GlobalShadows = false
+            lighting.Brightness = 1
+            
+            -- Tắt các effects
+            for _, v in pairs(lighting:GetChildren()) do
+                if v:IsA("BloomEffect") or 
+                   v:IsA("BlurEffect") or 
+                   v:IsA("ColorCorrectionEffect") or 
+                   v:IsA("SunRaysEffect") then
+                    v.Enabled = false
+                end
+            end
+            
+            -- Tối ưu terrain
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveSpeed = 0
+            terrain.WaterReflectance = 0
+            terrain.WaterTransparency = 0
+            
+            -- Giảm chất lượng texture
+            settings().Rendering.QualityLevel = 1
+            
+            -- Tối ưu các part trong game
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("Part") or v:IsA("UnionOperation") then
+                    v.Material = Enum.Material.Plastic
+                    v.Reflectance = 0
+                elseif v:IsA("Decal") or v:IsA("Texture") then
+                    v.Transparency = 1
+                elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                    v.Enabled = false
+                elseif v:IsA("Explosion") then
+                    v.BlastPressure = 1
+                    v.BlastRadius = 1
+                end
+            end
+            
+            -- Tắt các animations không cần thiết
+            for _, v in pairs(game:GetService("Players").LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("AnimationController") or v:IsA("Animator") then
+                    v.Parent = nil
+                end
+            end
+            
+        else
+            -- Tắt FPS Boost - khôi phục settings gốc
+            
+            lighting.FogEnd = DefaultFogEnd
+            lighting.FogStart = DefaultFogStart
+            lighting.ClockTime = DefaultClockTime
+            lighting.GlobalShadows = DefaultGlobalShadows
+            lighting.Brightness = DefaultBrightness
+            
+            -- Bật lại effects
+            for _, v in pairs(lighting:GetChildren()) do
+                if v:IsA("BloomEffect") or 
+                   v:IsA("BlurEffect") or 
+                   v:IsA("ColorCorrectionEffect") or 
+                   v:IsA("SunRaysEffect") then
+                    v.Enabled = true
+                end
+            end
+            
+            -- Khôi phục terrain
+            terrain.WaterWaveSize = 0.15
+            terrain.WaterWaveSpeed = 10
+            terrain.WaterReflectance = 1
+            terrain.WaterTransparency = 1
+            
+            -- Khôi phục chất lượng
+            settings().Rendering.QualityLevel = 7
+        end
+        
+        Window:Notify({
+            Title = Window.Settings.Title,
+            Description = (value and "Đã bật " or "Đã tắt ") .. "FPS Boost"
+        })
+    end,
+}, "FPSBoost")
+
+-- Thêm slider để điều chỉnh tầm nhìn xa
+sections.EspSection1:Slider({
+    Name = "View Distance",
+    Default = 100,
+    Minimum = 10,
+    Maximum = 1000,
+    Precision = 0,
+    Callback = function(value)
+        game:GetService("Lighting").FogEnd = value
+    end,
+}, "ViewDistance")
+
+------------------------
+sections.EspSection1:Toggle({
+    Name = "ESP Động Vật",
+    Default = false,
+    Callback = function(value)
+        local espFolder = game:GetService("CoreGui"):FindFirstChild("EspFolder")
+        if espFolder then espFolder:Destroy() end
+        
+        if value then
+            espFolder = Instance.new("Folder")
+            espFolder.Name = "EspFolder"
+            espFolder.Parent = game:GetService("CoreGui")
+            
+            local function createESP(model)
+                local billboard = Instance.new("BillboardGui")
+                local text = Instance.new("TextLabel")
+                
+                billboard.Name = "ESP"
+                billboard.Size = UDim2.new(0, 100, 0, 25)
+                billboard.AlwaysOnTop = true
+                billboard.Parent = espFolder
+                
+                text.Parent = billboard
+                text.BackgroundTransparency = 1
+                text.Size = UDim2.new(1, 0, 1, 0)
+                text.Text = model.Name
+                text.TextColor3 = Color3.new(1, 1, 1)
+                text.TextStrokeTransparency = 0
+                text.TextStrokeColor3 = Color3.new(0, 0, 0)
+                text.Font = Enum.Font.SourceSansBold
+                text.TextSize = 14
+                text.TextScaled = false
+                
+                local function updateESP()
+                    if model:FindFirstChild("HumanoidRootPart") then
+                        billboard.Adornee = model.HumanoidRootPart
+                        
+                        -- Tính khoảng cách từ camera đến model
+                        local camera = game.Workspace.CurrentCamera
+                        local distance = (camera.CFrame.Position - model.HumanoidRootPart.Position).Magnitude
+                        
+                        -- Điều chỉnh vị trí dựa trên khoảng cách
+                        local yOffset = math.clamp(4 * (distance/50), 4, 8)
+                        billboard.StudsOffset = Vector3.new(0, yOffset, 0)
+                        
+                        -- Điều chỉnh kích thước chữ dựa trên khoảng cách
+                        text.TextSize = math.clamp(14 * (50/distance), 8, 14)
+                    else
+                        billboard.Adornee = model:FindFirstChild("PrimaryPart") or model:FindFirstChildWhichIsA("BasePart")
+                    end
+                end
+                
+                game:GetService("RunService").RenderStepped:Connect(function()
+                    if model.Parent then
+                        updateESP()
+                    end
+                end)
+            end
+            
+            for _, model in pairs(workspace.Animals:GetChildren()) do
+                if model:IsA("Model") then
+                    createESP(model)
+                end
+            end
+            
+            workspace.Animals.ChildAdded:Connect(function(child)
+                if child:IsA("Model") then
+                    wait()
+                    createESP(child)
+                end
+            end)
+            
+        else
+            if espFolder then
+                espFolder:Destroy()
+            end
+        end
+
+        Window:Notify({
+            Title = Window.Settings.Title,
+            Description = (value and "Đã Bật " or "Đã Tắt ") .. "ESP Động Vật"
+        })
+    end,
+}, "EspAnimals")
+---------------------------
+sections.EspSection1:Toggle({
+    Name = "ESP Máu Động Vật",
+    Default = false,
+    Callback = function(value)
+        local healthEspFolder = game:GetService("CoreGui"):FindFirstChild("HealthEspFolder")
+        if healthEspFolder then healthEspFolder:Destroy() end
+        
+        if value then
+            healthEspFolder = Instance.new("Folder")
+            healthEspFolder.Name = "HealthEspFolder"
+            healthEspFolder.Parent = game:GetService("CoreGui")
+            
+            local function createHealthESP(model)
+                local billboard = Instance.new("BillboardGui")
+                local healthLabel = Instance.new("TextLabel")
+                
+                billboard.Name = "HealthESP"
+                billboard.Size = UDim2.new(0, 100, 0, 25)
+                billboard.AlwaysOnTop = true
+                billboard.Parent = healthEspFolder
+                
+                healthLabel.Parent = billboard
+                healthLabel.BackgroundTransparency = 1
+                healthLabel.Size = UDim2.new(1, 0, 1, 0)
+                healthLabel.TextColor3 = Color3.new(0, 1, 0)
+                healthLabel.TextStrokeTransparency = 0
+                healthLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+                healthLabel.Font = Enum.Font.SourceSansBold
+                healthLabel.TextSize = 14
+                
+                local function updateHealthESP()
+                    local humanoid = model:FindFirstChild("Humanoid")
+                    if not humanoid then
+                        billboard:Destroy()
+                        return
+                    end
+
+                    -- Kiểm tra nếu model đã chết hoặc bị xóa
+                    if not model.Parent or humanoid.Health <= 0 then
+                        billboard:Destroy()
+                        return
+                    end
+
+                    local rootPart = model:FindFirstChild("HumanoidRootPart")
+                    if not rootPart then
+                        billboard:Destroy()
+                        return
+                    end
+
+                    billboard.Adornee = rootPart
+                    
+                    -- Tính khoảng cách từ camera đến model
+                    local camera = game.Workspace.CurrentCamera
+                    local distance = (camera.CFrame.Position - rootPart.Position).Magnitude
+                    
+                    -- Điều chỉnh vị trí dựa trên khoảng cách
+                    local yOffset = math.clamp(3 * (distance/50), 3, 6)
+                    billboard.StudsOffset = Vector3.new(0, yOffset, 0)
+                    
+                    -- Điều chỉnh kích thước chữ dựa trên khoảng cách
+                    healthLabel.TextSize = math.clamp(14 * (50/distance), 8, 14)
+                    
+                    local health = math.floor(humanoid.Health)
+                    local maxHealth = math.floor(humanoid.MaxHealth)
+                    healthLabel.Text = health .. "/" .. maxHealth
+                    
+                    local healthPercent = health / maxHealth
+                    if healthPercent > 0.5 then
+                        healthLabel.TextColor3 = Color3.new(0, 1, 0)
+                    elseif healthPercent > 0.2 then
+                        healthLabel.TextColor3 = Color3.new(1, 1, 0)
+                    else
+                        healthLabel.TextColor3 = Color3.new(1, 0, 0)
+                    end
+                end
+                
+                -- Kết nối sự kiện update
+                local updateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                    if model.Parent then
+                        updateHealthESP()
+                    else
+                        updateConnection:Disconnect()
+                        billboard:Destroy()
+                    end
+                end)
+                
+                -- Kết nối sự kiện health changed
+                if model:FindFirstChild("Humanoid") then
+                    local healthConnection = model.Humanoid.HealthChanged:Connect(function(health)
+                        if health <= 0 then
+                            healthConnection:Disconnect()
+                            billboard:Destroy()
+                        elseif model.Parent then
+                            updateHealthESP()
+                        end
+                    end)
+                end
+
+                -- Cleanup khi model bị xóa
+                model.AncestryChanged:Connect(function(_, parent)
+                    if not parent then
+                        billboard:Destroy()
+                    end
+                end)
+            end
+            
+            -- Tạo ESP cho các model hiện có
+            for _, model in pairs(workspace.Animals:GetChildren()) do
+                if model:IsA("Model") then
+                    local humanoid = model:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        createHealthESP(model)
+                    end
+                end
+            end
+            
+            -- Tạo ESP cho các model mới
+            workspace.Animals.ChildAdded:Connect(function(child)
+                if child:IsA("Model") then
+                    wait()
+                    local humanoid = child:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        createHealthESP(child)
+                    end
+                end
+            end)
+            
+        else
+            if healthEspFolder then
+                healthEspFolder:Destroy()
+            end
+        end
+
+        Window:Notify({
+            Title = Window.Settings.Title,
+            Description = (value and "Đã Bật " or "Đã Tắt ") .. "ESP Máu Động Vật"
+        })
+    end,
+}, "EspHealthAnimals")
+
+-------------------------
+sections.EspSection1:Toggle({
+    Name = "Chams Động Vật",
+    Default = false,
+    Callback = function(value)
+        local chamsFolder = game:GetService("CoreGui"):FindFirstChild("ChamsFolder")
+        if chamsFolder then chamsFolder:Destroy() end
+        
+        if value then
+            chamsFolder = Instance.new("Folder")
+            chamsFolder.Name = "ChamsFolder"
+            chamsFolder.Parent = game:GetService("CoreGui")
+            
+            local function createChams(model)
+                local highlight = Instance.new("Highlight")
+                highlight.Parent = chamsFolder
+                highlight.Adornee = model
+                highlight.FillColor = Color3.new(1, 0, 0) -- Màu đỏ bên trong
+                highlight.OutlineColor = Color3.new(1, 1, 1) -- Viền trắng
+                highlight.FillTransparency = 0.5 -- Độ trong suốt phần trong
+                highlight.OutlineTransparency = 0 -- Viền đậm
+                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- Luôn hiển thị trên cùng
+                
+                -- Cập nhật màu dựa trên máu (nếu có Humanoid)
+                local function updateColor()
+                    local humanoid = model:FindFirstChild("Humanoid")
+                    if humanoid then
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        if healthPercent > 0.5 then
+                            highlight.FillColor = Color3.new(0, 1, 0) -- Xanh lá khi máu cao
+                        elseif healthPercent > 0.2 then
+                            highlight.FillColor = Color3.new(1, 1, 0) -- Vàng khi máu trung bình
+                        else
+                            highlight.FillColor = Color3.new(1, 0, 0) -- Đỏ khi máu thấp
+                        end
+                    end
+                end
+                
+                updateColor()
+                
+                -- Cập nhật màu khi máu thay đổi
+                if model:FindFirstChild("Humanoid") then
+                    model.Humanoid.HealthChanged:Connect(updateColor)
+                end
+            end
+            
+            -- Tạo Chams cho models hiện có
+            for _, model in pairs(workspace.Animals:GetChildren()) do
+                if model:IsA("Model") then
+                    createChams(model)
+                end
+            end
+            
+            -- Tạo Chams cho models mới
+            workspace.Animals.ChildAdded:Connect(function(child)
+                if child:IsA("Model") then
+                    wait()
+                    createChams(child)
+                end
+            end)
+            
+        else
+            if chamsFolder then
+                chamsFolder:Destroy()
+            end
+        end
+
+        Window:Notify({
+            Title = Window.Settings.Title,
+            Description = (value and "Đã Bật " or "Đã Tắt ") .. "Chams Động Vật"
+        })
+    end,
+}, "ChamsAnimals")
+
+----------------------------
+sections.EspSection1:Toggle({
+    Name = "Tracers Động Vật",
+    Default = false,
+    Callback = function(value)
+        -- Khởi tạo biến global để quản lý tracers
+        if not _G.AnimalTracers then
+            _G.AnimalTracers = {
+                Active = false,
+                Connections = {},
+                DrawingObjects = {}
+            }
+        end
+
+        _G.AnimalTracers.Active = value
+
+        -- Xóa tracers cũ nếu có
+        local function cleanupTracers()
+            for _, connection in pairs(_G.AnimalTracers.Connections) do
+                connection:Disconnect()
+            end
+            for _, drawing in pairs(_G.AnimalTracers.DrawingObjects) do
+                if drawing then drawing:Remove() end
+            end
+            _G.AnimalTracers.Connections = {}
+            _G.AnimalTracers.DrawingObjects = {}
+        end
+
+        if not value then
+            cleanupTracers()
+            return
+        end
+
+        -- Services
+        local camera = workspace.CurrentCamera
+        local runService = game:GetService("RunService")
+
+        -- Create tracer for a model
+        local function createTracer(model)
+            if not model:IsA("Model") or not _G.AnimalTracers.Active then return end
+            
+            local line = Drawing.new("Line")
+            line.Thickness = 2
+            line.Color = Color3.new(1, 1, 1)
+            line.Transparency = 1
+            line.Visible = false
+            
+            _G.AnimalTracers.DrawingObjects[model] = line
+
+            -- Update tracer position and visibility
+            local function updateTracer()
+                if not _G.AnimalTracers.Active or not model or not model.Parent then
+                    if line then
+                        line.Visible = false
+                        line:Remove()
+                        _G.AnimalTracers.DrawingObjects[model] = nil
+                    end
+                    return
+                end
+
+                local humanoidRootPart = model:FindFirstChild("HumanoidRootPart")
+                local humanoid = model:FindFirstChild("Humanoid")
+                
+                if not humanoidRootPart or not humanoid then
+                    line.Visible = false
+                    return
+                end
+
+                local modelPos, onScreen = camera:WorldToViewportPoint(humanoidRootPart.Position)
+                if not onScreen then
+                    line.Visible = false
+                    return
+                end
+
+                -- Update line positions
+                local screenSize = camera.ViewportSize
+                line.From = Vector2.new(screenSize.X/2, screenSize.Y/2)
+                line.To = Vector2.new(modelPos.X, modelPos.Y)
+
+                -- Update color based on health
+                local healthPercent = humanoid.Health / humanoid.MaxHealth
+                if healthPercent > 0.7 then
+                    line.Color = Color3.new(0, 1, 0)  -- Green
+                elseif healthPercent > 0.3 then
+                    line.Color = Color3.new(1, 1, 0)  -- Yellow
+                else
+                    line.Color = Color3.new(1, 0, 0)  -- Red
+                end
+
+                line.Visible = true
+            end
+
+            -- Connect update function
+            local connection = runService.RenderStepped:Connect(updateTracer)
+            table.insert(_G.AnimalTracers.Connections, connection)
+        end
+
+        -- Handle existing animals
+        for _, animal in pairs(workspace.Animals:GetChildren()) do
+            createTracer(animal)
+        end
+
+        -- Handle new animals
+        local childAddedConnection = workspace.Animals.ChildAdded:Connect(function(animal)
+            task.wait()  -- Small delay to ensure model is fully loaded
+            createTracer(animal)
+        end)
+        table.insert(_G.AnimalTracers.Connections, childAddedConnection)
+
+        -- Handle removed animals
+        local childRemovedConnection = workspace.Animals.ChildRemoved:Connect(function(animal)
+            local line = _G.AnimalTracers.DrawingObjects[animal]
+            if line then
+                line.Visible = false
+                line:Remove()
+                _G.AnimalTracers.DrawingObjects[animal] = nil
+            end
+        end)
+        table.insert(_G.AnimalTracers.Connections, childRemovedConnection)
+
+        -- Cleanup when character resets
+        local function onCharacterRemoving()
+            if _G.AnimalTracers.Active then
+                cleanupTracers()
+                -- Reconnect tracers after character respawns
+                task.wait(1)
+                if _G.AnimalTracers.Active then
+                    for _, animal in pairs(workspace.Animals:GetChildren()) do
+                        createTracer(animal)
+                    end
+                end
+            end
+        end
+
+        local charConnection = game.Players.LocalPlayer.CharacterRemoving:Connect(onCharacterRemoving)
+        table.insert(_G.AnimalTracers.Connections, charConnection)
+
+        -- Notify
+        Window:Notify({
+            Title = "Tracers",
+            Description = value and "Đã bật tracers động vật" or "Đã tắt tracers động vật"
+        })
+    end
+})
+
+-------------------------------
+local AimbotEnabled = false
+local WallCheck = false
+local AimPart = "Head"
+local MaxDistance = 1000
+local FovSize = 100
+local TargetModel = nil
+local Smoothness = 0.3
+
+-- FOV Circle (giữ nguyên)
+local FovCircle = Drawing.new("Circle")
+FovCircle.Thickness = 2
+FovCircle.NumSides = 100
+FovCircle.Radius = FovSize
+FovCircle.Filled = false
+FovCircle.Visible = false
+FovCircle.ZIndex = 999
+FovCircle.Transparency = 1
+FovCircle.Color = Color3.fromRGB(255, 255, 255)
+
+-- Cập nhật FOV Circle (giữ nguyên)
+RunService.RenderStepped:Connect(function()
+    if not FovCircle then return end
+    FovCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FovCircle.Radius = FovSize
+    FovCircle.Visible = AimbotEnabled
+end)
+
+-- Sửa lại hàm kiểm tra tầm nhìn
+local function IsTargetVisible(model)
+    if not WallCheck then return true end
+    
+    local targetPart = model:FindFirstChild(AimPart) or model:FindFirstChild("HumanoidRootPart")
+    if not targetPart then return false end
+    
+    local ray = Ray.new(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position)
+    local hits = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, model})
+    return hits == nil
+end
+
+-- Sửa lại hàm tìm model gần nhất
+local function GetClosestModel()
+    local closestModel = nil
+    local shortestDistance = math.huge
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, model in pairs(workspace.Animals:GetChildren()) do
+        -- Kiểm tra model có đủ các part cần thiết không
+        if model:FindFirstChild("HumanoidRootPart") and 
+           model:FindFirstChild("Humanoid") then
+            
+            -- Ưu tiên dùng AimPart, nếu không có thì dùng HumanoidRootPart
+            local targetPart = model:FindFirstChild(AimPart) or model.HumanoidRootPart
+            local targetPos = targetPart.Position
+            local screenPoint, onScreen = Camera:WorldToScreenPoint(targetPos)
+            
+            if onScreen then
+                local screenCenter = Vector2.new(screenPoint.X, screenPoint.Y)
+                local distanceFromCenter = (center - screenCenter).Magnitude
+                
+                if distanceFromCenter <= FovSize then
+                    local distance = (model.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                    
+                    if distance <= MaxDistance and distance < shortestDistance and IsTargetVisible(model) then
+                        closestModel = model
+                        shortestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+    
+    return closestModel
+end
+
+-- Tạo UI cho Aimbot
+sections.AimSection1:Toggle({
+    Name = "Aimbot",
+    Default = false,
+    Callback = function(value)
+        AimbotEnabled = value
+        FovCircle.Visible = value
+        
+        Window:Notify({
+            Title = Window.Settings.Title,
+            Description = (value and "Đã Bật " or "Đã Tắt ") .. "Aimbot"
+        })
+    end,
+}, "Aimbot")
+
+sections.AimSection1:Toggle({
+    Name = "Wall Check",
+    Default = false,
+    Callback = function(value)
+        WallCheck = value
+        
+        Window:Notify({
+            Title = Window.Settings.Title,
+            Description = (value and "Đã Bật " or "Đã Tắt ") .. "Wall Check"
+        })
+    end,
+}, "WallCheck")
+
+sections.AimSection1:Dropdown({
+    Name = "Aim Part",
+    Multi = false,
+    Required = true,
+    Options = {"Head", "HumanoidRootPart", "Torso"},
+    Default = 1,
+    Callback = function(value)
+        AimPart = value
+    end,
+}, "AimPart")
+
+sections.AimSection1:Input({
+    Name = "Aim Distance",
+    Default = "1000",
+    Numeric = true,
+    Finished = true,
+    Callback = function(value)
+        MaxDistance = math.clamp(tonumber(value), 1, 5000)
+    end,
+}, "AimDistance")
+
+sections.AimSection1:Slider({
+    Name = "FOV Size",
+    Default = 100,
+    Minimum = 10,
+    Maximum = 500,
+    Precision = 0,
+    Callback = function(value)
+        FovSize = value
+    end,
+}, "FovSize")
+
+sections.AimSection1:Slider({
+    Name = "Smoothness",
+    Default = 30,
+    Minimum = 1,
+    Maximum = 100,
+    Precision = 0,
+    Callback = function(value)
+        Smoothness = value / 100
+    end,
+}, "Smoothness")
+
+-- Xử lý aimbot
+RunService.RenderStepped:Connect(function()
+    if not AimbotEnabled then return end
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local target = GetClosestModel()
+    if not target then return end
+    
+    -- Lấy part để nhắm (AimPart hoặc HumanoidRootPart)
+    local targetPart = target:FindFirstChild(AimPart) or target.HumanoidRootPart
+    if not targetPart then return end
+    
+    -- Tính toán hướng nhìn mới
+    local targetPos = targetPart.Position
+    local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+    
+    -- Di chuyển camera mượt mà
+    Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, Smoothness)
+end)
+------------------------------------------------------------------------------------------------------------
+
+
+-- Hàm lưu vị trí
+local function savePosition(position)
+    local data = {
+        X = position.X.Scale,
+        XOffset = position.X.Offset,
+        Y = position.Y.Scale,
+        YOffset = position.Y.Offset
+    }
+    writefile("ui_position.json", HttpService:JSONEncode(data))
+end
+
+-- Hàm đọc vị trí đã lưu
+local function loadPosition()
+    if isfile("ui_position.json") then
+        local data = HttpService:JSONDecode(readfile("ui_position.json"))
+        return UDim2.new(data.X, data.XOffset, data.Y, data.YOffset)
+    end
+    return UDim2.new(0.1, 0, 0.7, 0)
+end
+
+-- Xóa UI cũ nếu tồn tại
+local function clearUI()
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local oldUI = playerGui:FindFirstChild("MainUI")
+    if oldUI then
+        oldUI:Destroy()
+    end
+end
+
+clearUI()
+
+-- Tạo giao diện chính
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MainUI"
+ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Tạo nút chính
+local MainButton = Instance.new("ImageButton")
+MainButton.Name = "MainButton"
+MainButton.Size = UDim2.new(0, 50, 0, 50)
+MainButton.Position = loadPosition() -- Đọc vị trí đã lưu
+MainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainButton.Image = "rbxassetid://128828160886762"
+MainButton.BackgroundTransparency = 0
+MainButton.Parent = ScreenGui
+
+-- Bo tròn góc
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0.2, 0)
+UICorner.Parent = MainButton
+
+-- Thêm viền
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
+UIStroke.Thickness = 1.5
+UIStroke.Transparency = 0.8
+UIStroke.Parent = MainButton
+
+local Enabled = false
+
+-- Hiệu ứng nhấn nút
+local function buttonEffect()
+    local pressInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad)
+    local pressAnim = TweenService:Create(MainButton, pressInfo, {
+        Size = UDim2.new(0, 45, 0, 45)
+    })
+    local releaseAnim = TweenService:Create(MainButton, pressInfo, {
+        Size = UDim2.new(0, 50, 0, 50)
+    })
+    
+    pressAnim:Play()
+    wait(0.1)
+    releaseAnim:Play()
+end
+
+-- Kích hoạt RightControl
+local function activateRightControl()
+    local vim = game:GetService("VirtualInputManager")
+    vim:SendKeyEvent(true, Enum.KeyCode.RightControl, false, game)
+    wait()
+    vim:SendKeyEvent(false, Enum.KeyCode.RightControl, false, game)
+end
+
+-- Hiệu ứng chuyển đổi
+local function updateToggle()
+    if Enabled then
+        TweenService:Create(MainButton, TweenInfo.new(0.3), {
+            BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        }):Play()
+    else
+        TweenService:Create(MainButton, TweenInfo.new(0.3), {
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        }):Play()
+    end
+end
+
+MainButton.MouseButton1Click:Connect(function()
+    buttonEffect()
+    Enabled = not Enabled
+    updateToggle()
+    activateRightControl()
+end)
+
+-- Kéo thả UI với lưu vị trí
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    local newPosition = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+    MainButton.Position = newPosition
+    savePosition(newPosition) -- Lưu vị trí mới
+end
+
+MainButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+
+
+
+
+
+
+
+
+------------- thông------------
+sections.MainSection1:Divider()
+
+sections.MainSection1:Header({
+	Text = "Tiêu đề #2"
+})
+
+sections.MainSection1:Paragraph({
+	Header = "Thông tin",
+	Body = "Đang bản demo đang tốt ưu"
+})
+
+sections.MainSection1:Label({
+	Text = "V0.1.1."
+})
+
+sections.MainSection1:SubLabel({
+	Text = "Ui Mac share và được thêm những chức năng tự code độc quyền."
+})
+
+MacLib:SetFolder("Maclib")
+tabs.Settings:InsertConfigSection("Left")
+
+Window.onUnloaded(function()
+	print("Unloaded!")
+end)
+
+tabs.Main:Select()
+MacLib:LoadAutoLoadConfig()
